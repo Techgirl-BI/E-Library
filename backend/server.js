@@ -1,6 +1,6 @@
 import express from 'express'
 import cors from 'cors'
-import mongodb from 'mongodb'
+import mongodb, { ObjectId } from 'mongodb'
 
 const app = express()
 const port = process.env.PORT || 5000;
@@ -32,8 +32,65 @@ async function run() {
 
     //create a collection of document
 
-    const bookCollection = client.db("BookInventory").collections("books");
-    
+    const bookCollections = client.db("BookInventory").collection("books");
+     
+    //insert a book to the database: post method
+
+    app.post("/upload-book", async(req,res) => {
+        const data = req.body;
+        const result = await bookCollections.insertOne(data)
+        res.send(result);
+
+    })
+
+    //get all books from db
+    app.get('/all-books', async(req,res)=> {
+        const books = bookCollections.find()
+        const result = await books.toArray()
+        res.send(result)
+    })
+//update a book data : patch or update method
+app.patch("/book/:id", async(req,res) => {
+    const id = req.params.id;
+    const updateBookData = req.body
+    const filter = {_id: new ObjectId(id)}
+    const options = { upsert: true};
+
+    const updateDoc = {
+        $set: {
+            ...updateBookData
+        }
+    }
+    //update
+    const result = await bookCollections.updateOne(filter, updateDoc, options)
+    res.send(result)
+})
+//delete a doc
+app.delete("/book/:id", async(req,res) => {
+const id = req.params.id;
+const filter = {_id: new ObjectId(id)}
+const result = await bookCollections.deleteOne(filter);
+res.send(result);
+})
+
+//find by category
+app.get("/all-books", async(req,res)=> {
+    let query = {}
+    if(req.query?.category){
+        query = {category:req.query.category}
+    }
+    const result = await bookCollections.find(query).toArray();
+    res.send(result)
+})
+
+//to get single book
+app.get("/books/:id", async (req,res) => {
+  const id = req.params.id
+  const filter = {_id: new ObjectId(id)}
+  const result = await bookCollections.findOne(filter)
+  res.send(result)
+})
+
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
@@ -49,4 +106,4 @@ app.listen((port), () => {
     console.log(`App is Listening on port ${port}`)
 })
 
-//15LTJMEeWxzawPlu
+
